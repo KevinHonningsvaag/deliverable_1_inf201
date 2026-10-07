@@ -159,6 +159,9 @@ ENV/
 env.bak/
 venv.bak/
 
+# Local credentials
+frost_met_id.json
+
 # Spyder project settings
 .spyderproject
 .spyproject
