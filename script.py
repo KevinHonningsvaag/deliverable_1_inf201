@@ -51,18 +51,13 @@ def make_dataframe(data: dict[str, float]) -> pd.DataFrame:
 
 
 def plot_temp(df: pd.DataFrame) -> None:
-    positive = df['value'].where(df['value']>=0)
-    negative = df['value'].where(df['value']<=0)
-    plt.plot(df['referenceTime'], df['value'], color="green", label="Rapid changes betwen ±")
-    plt.plot(df['referenceTime'], positive, color="red", label="Above 0C°")
-    plt.plot(df['referenceTime'], negative, color= "blue", label="Bellow 0C°")
+    plt.plot(df['referenceTime'], df['value'], color="purple")
     plt.title("Mean temprature PT0H 01.01.2025 - 31.12.2025")
     plt.xlabel("Date")
     plt.ylabel("Degres C°")
     plt.axhline(y=0, linestyle="--", color="black")
-    plt.legend()
     plt.show()
-    #plt.savefig("plot_temp")
+   
 
 
 def temp_table(mean, median, min, max):
