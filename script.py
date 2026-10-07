@@ -1,22 +1,15 @@
 
-import requests
+# Standard library
 import json
+from typing import Any
 
-
+# Third party library
 import pandas as pd
 import matplotlib.pyplot as plt
+import requests
 
 
-sources: str = "SN17850"
-elements: str = 'mean(air_temperature P1D)'
-referencetime: str = '2025-01-01/2025-12-31'
-timeOffset: str = 'PT6H'
-endpoint: str = 'https://frost.met.no/observations/v0.jsonld'
-parameters: dict[str, str] = {
-    'sources': sources,
-    'elements': elements,
-    'referencetime': referencetime,
-}
+ENDPOINT: str = 'https://frost.met.no/observations/v0.jsonld'
 
 
 def get_client_id() -> str:
@@ -26,52 +19,55 @@ def get_client_id() -> str:
     return credentials[0]["user_id"]
 
 
-def request_data(endpoint: str, parameters: dict[str, str], client_id) -> dict[str, float]:
+def request_data(endpoint: str, parameters: dict[str, str], client_id: str) -> list[dict[str, Any]]:
     r = requests.get(endpoint, parameters, auth=(client_id,''))
-    json = r.json()
+    json_data: dict[str, Any] = r.json()
     if r.status_code == 200:
-       data = json['data']
+       data: list[dict[str, Any]] = json_data['data']
        print('Data retrieved from frost.met.no!')
     else:
        print('Error! Returned status code %s' % r.status_code)
-       print('Message: %s' % json['error']['message'])
-       print('Reason: %s' % json['error']['reason'])
-    data: dict[str, float] = json['data']
+       print('Message: %s' % json_data['error']['message'])
+       print('Reason: %s' % json_data['error']['reason'])
+    data: list[dict[str, Any]] = json_data['data']
 
     return data
 
 
-def make_dataframe(data: dict[str, float]) -> pd.DataFrame:
+def make_dataframe(data: list[dict[str, Any]]) -> pd.DataFrame:
     df: pd.DataFrame = pd.json_normalize(data, record_path=['observations'], meta=['sourceId', 'referenceTime'])
     df: pd.DataFrame = df[df["timeOffset"] == "PT0H"]
-    #df: pd.DataFrame = df.set_index('referenceTime')
     df['referenceTime'] = pd.to_datetime(df["referenceTime"])
 
     return df
 
 
 def plot_temp(df: pd.DataFrame) -> None:
-    positive = df['value'].where(df['value']>=0)
-    negative = df['value'].where(df['value']<=0)
-    plt.plot(df['referenceTime'], df['value'], color="green", label="Rapid changes betwen ±")
-    plt.plot(df['referenceTime'], positive, color="red", label="Above 0C°")
-    plt.plot(df['referenceTime'], negative, color= "blue", label="Bellow 0C°")
-    plt.title("Mean temprature PT0H 01.01.2025 - 31.12.2025")
+    dates = df["referenceTime"]
+    temperatures = df["value"]
+    plt.plot(dates, temperatures, color="black")
+    plt.fill_between(dates, temperatures, 0, where=temperatures >= 0, interpolate=True, color="red")
+    plt.fill_between(dates, temperatures, 0, where=temperatures < 0, interpolate=True, color="blue")
+    plt.title("Mean temperature PT0H 01.01.2025 - 31.12.2025")
     plt.xlabel("Date")
-    plt.ylabel("Degres C°")
+    plt.ylabel("Degrees °C")
     plt.axhline(y=0, linestyle="--", color="black")
-    plt.legend()
     plt.show()
-    #plt.savefig("plot_temp")
 
 
-def temp_table(mean, median, min, max):
+def temp_table(mean: float, median: float, min: float, max: float) -> None:
     pass
 
 
 def main() -> None:
+    parameters: dict[str, str] = {
+    'sources': 'SN17850',
+    'elements': 'mean(air_temperature P1D)',
+    'referencetime': '2025-01-01/2025-12-31',
+}
     client_id: str = get_client_id()
-    data: dict[str, float] = request_data(endpoint, parameters, client_id)
+    
+    data: list[dict[str, Any]] = request_data(ENDPOINT, parameters, client_id)
     df: pd.DataFrame = make_dataframe(data)
     plot_temp(df)
 
