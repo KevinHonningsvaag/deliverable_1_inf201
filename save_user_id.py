@@ -13,6 +13,6 @@ def save_frost_met_id_to_json(user_id: str, client_secret: str) -> None:
 
 
 # Put in your user ID and client secret here and delete it when the script is done.
-user_id: str = "a986c628-3898-4935-9d6c-c9f9b2bf7bf3"
-client_secret: str = "007bc2f2-049e-4452-ad50-fe22a27e8ac4"
+user_id: str = "your_user_id"
+client_secret: str = "your_client_secret"
 save_frost_met_id_to_json(user_id, client_secret)
