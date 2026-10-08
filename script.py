@@ -34,10 +34,10 @@ def request_data(endpoint: str, parameters: dict[str, str], client_id: str) -> l
     return data
 
 
-def make_dataframe(data: list[dict[str, Any]]) -> pd.DataFrame:
+def make_dataframe(data: list[dict[str, Any]], referenceTime: str) -> pd.DataFrame:
     df: pd.DataFrame = pd.json_normalize(data, record_path=['observations'], meta=['sourceId', 'referenceTime'])
     df: pd.DataFrame = df[df["timeOffset"] == "PT6H"]
-    df['referenceTime'] = pd.to_datetime(df["referenceTime"])
+    df['referenceTime'] = pd.to_datetime(df[referenceTime])
 
     return df
 
@@ -55,7 +55,18 @@ def plot_temp(df: pd.DataFrame) -> None:
     plt.show()
 
 
-def temp_table(mean: float, median: float, min: float, max: float) -> None:
+def get_mean_temp(client_id: str):
+    parameters = {
+        'sources': 'SN17850',
+        'elements': 'mean(air_temperature P1Y)',
+        'referencetime': '2025-01-01/2025-12-31',
+    }
+    mean_temp = request_data(ENDPOINT, parameters, client_id)
+    mean_temp_df = make_dataframe(mean_temp, "PT0H")
+    print(mean_temp_df)
+    
+
+def summary_temp_2025(mean: float, median: float, min: float, max: float) -> None:
     pass
 
 
@@ -68,7 +79,7 @@ def main() -> None:
     client_id: str = get_client_id()
     
     data_temp_2025: list[dict[str, Any]] = request_data(ENDPOINT, parameters_temp_2025, client_id)
-    df_temp_2025: pd.DataFrame = make_dataframe(data_temp_2025)
+    df_temp_2025: pd.DataFrame = make_dataframe(data_temp_2025, "PT6H")
     plot_temp(df_temp_2025)
 
     parameters_precipitation: dict[str, str] = {
@@ -77,8 +88,8 @@ def main() -> None:
         'referencetime': '2025-01-01/2025-12-31',
     }
     data_precipitation: list[dict[str, Any]] = request_data(ENDPOINT, parameters_precipitation, client_id)
-    df_precipitation: pd.DataFrame = make_dataframe(data_precipitation)
-    print(df_precipitation)
+    df_precipitation: pd.DataFrame = make_dataframe(data_precipitation, "PT6H")
+    get_mean_temp(client_id)
 
 if __name__ == "__main__":
     try:
