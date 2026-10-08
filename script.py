@@ -120,7 +120,7 @@ def summary_temp_2025(mean: np.float64, median: float, minimum: np.float64, maxi
     print(f"| {title:<{width}} |")
     print(border)
     for label, value in rows:
-        print(f"| {label:<{int(width/2)}} {value:>{int(width/2-1)}} |")
+        print(f"| {label:<{int(width/2)}}{value:>{int(width/2)}} |")
         print(border)
     print()
 
