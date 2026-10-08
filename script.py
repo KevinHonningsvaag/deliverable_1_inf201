@@ -36,7 +36,7 @@ def request_data(endpoint: str, parameters: dict[str, str], client_id: str) -> l
 
 def make_dataframe(data: list[dict[str, Any]]) -> pd.DataFrame:
     df: pd.DataFrame = pd.json_normalize(data, record_path=['observations'], meta=['sourceId', 'referenceTime'])
-    df: pd.DataFrame = df[df["timeOffset"] == "PT0H"]
+    df: pd.DataFrame = df[df["timeOffset"] == "PT6H"]
     df['referenceTime'] = pd.to_datetime(df["referenceTime"])
 
     return df
@@ -48,7 +48,7 @@ def plot_temp(df: pd.DataFrame) -> None:
     plt.plot(dates, temperatures, color="black")
     plt.fill_between(dates, temperatures, 0, where=temperatures >= 0, interpolate=True, color="red")
     plt.fill_between(dates, temperatures, 0, where=temperatures < 0, interpolate=True, color="blue")
-    plt.title("Mean temperature PT0H 01.01.2025 - 31.12.2025")
+    plt.title("Mean temperature PT6H 01.01.2025 - 31.12.2025")
     plt.xlabel("Date")
     plt.ylabel("Degrees °C")
     plt.axhline(y=0, linestyle="--", color="black")
@@ -60,17 +60,25 @@ def temp_table(mean: float, median: float, min: float, max: float) -> None:
 
 
 def main() -> None:
-    parameters: dict[str, str] = {
+    parameters_temp_2025: dict[str, str] = {
     'sources': 'SN17850',
     'elements': 'mean(air_temperature P1D)',
     'referencetime': '2025-01-01/2025-12-31',
 }
     client_id: str = get_client_id()
     
-    data: list[dict[str, Any]] = request_data(ENDPOINT, parameters, client_id)
-    df: pd.DataFrame = make_dataframe(data)
-    plot_temp(df)
+    data_temp_2025: list[dict[str, Any]] = request_data(ENDPOINT, parameters_temp_2025, client_id)
+    df_temp_2025: pd.DataFrame = make_dataframe(data_temp_2025)
+    plot_temp(df_temp_2025)
 
+    parameters_precipitation: dict[str, str] = {
+        'sources' : 'SN17850',
+        'elements' : 'sum(precipitation_amount P1D)',
+        'referencetime': '2025-01-01/2025-12-31',
+    }
+    data_precipitation: list[dict[str, Any]] = request_data(ENDPOINT, parameters_precipitation, client_id)
+    df_precipitation: pd.DataFrame = make_dataframe(data_precipitation)
+    print(df_precipitation)
 
 if __name__ == "__main__":
     try:
