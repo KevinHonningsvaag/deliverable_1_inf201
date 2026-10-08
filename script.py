@@ -29,14 +29,14 @@ def request_data(endpoint: str, parameters: dict[str, str], client_id: str) -> l
        print('Error! Returned status code %s' % r.status_code)
        print('Message: %s' % json_data['error']['message'])
        print('Reason: %s' % json_data['error']['reason'])
-    data: list[dict[str, Any]] = json_data['data']
+    data = json_data['data']
 
     return data
 
 
 def make_dataframe(data: list[dict[str, Any]]) -> pd.DataFrame:
     df: pd.DataFrame = pd.json_normalize(data, record_path=['observations'], meta=['sourceId', 'referenceTime'])
-    df: pd.DataFrame = df[df["timeOffset"] == "PT0H"]
+    df = df[df["timeOffset"] == "PT0H"]
     df['referenceTime'] = pd.to_datetime(df["referenceTime"])
 
     return df
@@ -45,9 +45,12 @@ def make_dataframe(data: list[dict[str, Any]]) -> pd.DataFrame:
 def plot_temp(df: pd.DataFrame) -> None:
     dates = df["referenceTime"]
     temperatures = df["value"]
-    plt.plot(dates, temperatures, color="black")
-    plt.fill_between(dates, temperatures, 0, where=temperatures >= 0, interpolate=True, color="red")
-    plt.fill_between(dates, temperatures, 0, where=temperatures < 0, interpolate=True, color="blue")
+    plt.grid(True, zorder=1, color="black")
+    plt.grid(True, which="minor", axis="y", zorder=0, color="gray")
+    plt.minorticks_on()
+    plt.plot(dates, temperatures, color="black", zorder=1)
+    plt.fill_between(dates, temperatures, 0, where=(temperatures >= 0).tolist(), interpolate=True, color="red", zorder=2)
+    plt.fill_between(dates, temperatures, 0, where=(temperatures < 0).tolist(), interpolate=True, color="blue", zorder=2)
     plt.title("Mean temperature PT0H 01.01.2025 - 31.12.2025")
     plt.xlabel("Date")
     plt.ylabel("Degrees °C")
