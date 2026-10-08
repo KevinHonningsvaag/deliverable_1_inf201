@@ -105,15 +105,15 @@ def get_minimum_temp(client_id: str) -> np.float64:
 
 
 def summary_temp_2025(mean: np.float64, median: float, minimum: np.float64, maximum: np.float64) -> None:
-    title = f"Summary of key values regarding temprature in 2025"
-    rows = [
+    title: str = f"Summary of key values regarding temprature in 2025"
+    rows: list[tuple[str,str]] = [
         ("Mean air temprature:", f"{mean}°C"),
         ("Median air temprature:", f"{median}°C"),
         ("Maximum air temprature:", f"{maximum}°C"),
         ("Mininmum air temprature:", f"{minimum}°C"),
     ]
-    width = len(title)
-    border = f"+{'-' * (width + 2)}+"
+    width:int = len(title)
+    border: str = f"+{'-' * (width + 2)}+"
 
     print()
     print(border)
@@ -145,11 +145,11 @@ def main() -> None:
     data_precipitation: list[dict[str, Any]] = request_data(ENDPOINT, parameters_precipitation, client_id)
     df_precipitation: pd.DataFrame = make_dataframe(data_precipitation, "PT6H")
 
-    mean_temp_2025_1PY = get_mean_temp(client_id)
-    median_temp_2025 = get_median_temp(df_temp_2025)
-    maximum = get_maximum_temp(client_id)
-    minimum = get_minimum_temp(client_id)
-    summary_temp_2025(mean_temp_2025_1PY, median_temp_2025, minimum, maximum)    
+    mean_temp_2025_1PY: np.float64 = get_mean_temp(client_id)
+    median_temp_2025: float = get_median_temp(df_temp_2025)
+    maximum_temp_2025: np.float64 = get_maximum_temp(client_id)
+    minimum_temp_2025: np.float64 = get_minimum_temp(client_id)
+    summary_temp_2025(mean_temp_2025_1PY, median_temp_2025, minimum_temp_2025, maximum_temp_2025)
 
 
 if __name__ == "__main__":
