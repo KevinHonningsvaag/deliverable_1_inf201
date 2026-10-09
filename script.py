@@ -33,6 +33,21 @@ def request_data(endpoint: str, parameters: dict[str, str], client_id: str) -> l
 
     return data
 
+def request_old_data(endpoint: str, old_parameters: dict[str, str], client_id: str) -> list[dict[str, Any]]:
+    """Request old data from the frost.met.no API."""
+    r = requests.get(endpoint, old_parameters, auth=(client_id,''))
+    json_old_data: dict[str, Any] = r.json()
+    if r.status_code == 200:
+       old_data: list[dict[str, Any]] = json_old_data['data']
+       print('Data from 1925 retrieved from frost.met.no!')
+    else:
+       print('Error! Returned status code %s' % r.status_code)
+       print('Message: %s' % json_old_data['error']['message'])
+       print('Reason: %s' % json_old_data['error']['reason'])
+    old_data = json_old_data['data']
+
+    return old_data
+
 
 def make_dataframe(data: list[dict[str, Any]]) -> pd.DataFrame:
     df: pd.DataFrame = pd.json_normalize(data, record_path=['observations'], meta=['sourceId', 'referenceTime'])
@@ -67,10 +82,17 @@ def main() -> None:
     'sources': 'SN17850',
     'elements': 'mean(air_temperature P1D)',
     'referencetime': '2025-01-01/2025-12-31',
+    
 }
+    old_parameters: dict[str, str] = {
+        'sources': 'SN17850',
+        'elements': 'mean(air_temperature P1D)',
+        'referencetime': '1925-01-01/1925-12-31'
+    }
     client_id: str = get_client_id()
     
     data: list[dict[str, Any]] = request_data(ENDPOINT, parameters, client_id)
+    old_data: list[dict[str, Any]] = request_old_data(ENDPOINT, old_parameters, client_id)
     df: pd.DataFrame = make_dataframe(data)
     plot_temp(df)
 
