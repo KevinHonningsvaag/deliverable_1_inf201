@@ -77,12 +77,11 @@ def plot_temp(df: pd.DataFrame) -> None:
     plt.plot(dates, temperatures, color="black", zorder=1, label="2025")
     plt.fill_between(dates, temperatures, 0, where=(temperatures >= 0).tolist(), interpolate=True, color="red", zorder=2)
     plt.fill_between(dates, temperatures, 0, where=(temperatures < 0).tolist(), interpolate=True, color="blue", zorder=2)
-    plt.title("Mean temperature PT0H for 2025")
+    plt.title("Mean temperature PT0H 01.01.2025 - 31.12.2025")
     plt.xlabel("Date")
     plt.ylabel("Degrees °C")
     plt.axhline(y=0, linestyle="--", color="black")
     plt.legend()
-    plt.show()
 
 def compare_temps(df: pd.DataFrame, df_old: pd.DataFrame) -> None:
     """compare the temps from 1925 and 2025 in the same plot."""
@@ -95,16 +94,18 @@ def compare_temps(df: pd.DataFrame, df_old: pd.DataFrame) -> None:
     temperatures = df["value"]
     plt.figure(figsize=(10, 5))
     plt.grid(True, zorder=0, color="black")
+    plt.grid(True, which="minor", axis="y", zorder=0, color="black")
+    plt.minorticks_on()
+    #Write the x-axis as months instead with the full date, and set the ticks to be at the start of each month.
     plt.gca().xaxis.set_major_locator(mdates.MonthLocator())
     plt.gca().xaxis.set_major_formatter(mdates.DateFormatter('%b'))
-    plt.plot(dates_old, temperatures_old, color="turquoise", label="1925", zorder = 1)
+    plt.plot(dates_old, temperatures_old, color="turquoise", label="1925", zorder = 3)
     plt.plot(dates, temperatures, color="black", label="2025", zorder = 2)
     plt.title("Mean temperature PT0H for both 1925 and 2025")
     plt.xlabel("Month")
     plt.ylabel("Degrees °C")
     plt.axhline(y=0, linestyle="--", color="black")
     plt.legend()
-    plt.show()
 
 def temp_table(mean: float, median: float, min: float, max: float) -> None:
     pass
@@ -130,6 +131,7 @@ def main() -> None:
     df_old: pd.DataFrame = make_dataframe_old(old_data)
     plot_temp(df)
     compare_temps(df, df_old)
+    plt.show()
 
 
 if __name__ == "__main__":
