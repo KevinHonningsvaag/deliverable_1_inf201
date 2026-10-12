@@ -112,17 +112,34 @@ def summary_temp_2025(mean: np.float64, median: float, minimum: np.float64, maxi
         ("Maximum air temprature:", f"{maximum}°C"),
         ("Mininmum air temprature:", f"{minimum}°C"),
     ]
-    width:int = len(title)
+    width: int = len(title)
     border: str = f"+{'-' * (width + 2)}+"
 
     print()
     print(border)
-    print(f"| {title:<{width}} |")
+    print(f"| {title} |")
     print(border)
     for label, value in rows:
         print(f"| {label:<{int(width/2)}}{value:>{int(width/2)}} |")
         print(border)
     print()
+
+
+def plot_precipitation_temp(precipitation: pd.DataFrame, temp: pd.DataFrame) -> None:
+    dates: pd.Series = precipitation['referenceTime']
+    precipitation_values: pd.Series = precipitation['value']
+    temp_values: pd.Series = temp['value']
+    
+    fig, ax1 = plt.subplots()
+    ax1.bar(dates, precipitation_values)
+    ax1.set_ylabel("Precipitation mm")
+    ax1.set_xlabel("Dates")
+
+    ax2 = ax1.twinx()
+    ax2.plot(dates, temp_values, color="red")
+    ax2.set_ylabel("Degrees °C")
+    plt.grid()
+    plt.show()
 
 
 def main() -> None:
@@ -137,6 +154,12 @@ def main() -> None:
     df_temp_2025: pd.DataFrame = make_dataframe(data_temp_2025, "PT6H")
     plot_temp(df_temp_2025)
 
+    mean_temp_2025_1PY: np.float64 = get_mean_temp(client_id)
+    median_temp_2025: float = get_median_temp(df_temp_2025)
+    maximum_temp_2025: np.float64 = get_maximum_temp(client_id)
+    minimum_temp_2025: np.float64 = get_minimum_temp(client_id)
+    summary_temp_2025(mean_temp_2025_1PY, median_temp_2025, minimum_temp_2025, maximum_temp_2025)
+
     parameters_precipitation: dict[str, str] = {
         'sources' : 'SN17850',
         'elements' : 'sum(precipitation_amount P1D)',
@@ -144,12 +167,7 @@ def main() -> None:
     }
     data_precipitation: list[dict[str, Any]] = request_data(ENDPOINT, parameters_precipitation, client_id)
     df_precipitation: pd.DataFrame = make_dataframe(data_precipitation, "PT6H")
-
-    mean_temp_2025_1PY: np.float64 = get_mean_temp(client_id)
-    median_temp_2025: float = get_median_temp(df_temp_2025)
-    maximum_temp_2025: np.float64 = get_maximum_temp(client_id)
-    minimum_temp_2025: np.float64 = get_minimum_temp(client_id)
-    summary_temp_2025(mean_temp_2025_1PY, median_temp_2025, minimum_temp_2025, maximum_temp_2025)
+    plot_precipitation_temp(df_precipitation, df_temp_2025)
 
 
 if __name__ == "__main__":
