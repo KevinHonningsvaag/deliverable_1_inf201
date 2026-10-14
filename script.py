@@ -1,7 +1,6 @@
 
 # Standard library
 import json
-from statistics import median_grouped
 from typing import Any
 
 # Third party library
@@ -86,11 +85,11 @@ def compare_temps(df: pd.DataFrame, df_old: pd.DataFrame) -> None:
     plt.legend()
 
 
-def get_mean_temp(client_id: str) ->  np.float64:
+def get_mean_temp(client_id: str, referencetime) ->  np.float64:
     parameters: dict[str, str] = {
         'sources': 'SN17850',
         'elements': 'mean(air_temperature P1Y)',
-        'referencetime': '2025-01-01/2025-12-31',
+        'referencetime': referencetime,
     }
     mean_temp: list[dict[str, Any]] = request_data(ENDPOINT, parameters, client_id)
     mean_temp_df: pd.DataFrame = make_dataframe(mean_temp, "PT0H")
@@ -100,44 +99,43 @@ def get_mean_temp(client_id: str) ->  np.float64:
 
 
 def get_median_temp(df: pd.DataFrame) -> float:
-    array = df['value'].values
-    median: float = median_grouped(array)
+    median: float = df['value'].median()
 
     return median
     
 
 
-def get_maximum_temp(client_id: str) -> np.float64:
+def get_maximum_temp(client_id: str, referencetime:str) -> np.float64:
     parameters: dict[str, str] = {
                 'sources': 'SN17850',
                 'elements': 'max(air_temperature P1Y)',
-                'referencetime': '2025-01-01/2025-12-31',
+                'referencetime': referencetime,
 }
     maximum_temp_data: list[dict[str, Any]] = request_data(ENDPOINT, parameters, client_id)
-    maximum_temp_df: pd.DataFrame = make_dataframe(maximum_temp_data, "PT18H")
+    maximum_temp_df: pd.DataFrame = make_dataframe(maximum_temp_data, 'PT18H')
     maximum_temp: np.float64 = maximum_temp_df['value'].values[0]
 
     return maximum_temp
 
 
-def get_minimum_temp(client_id: str) -> np.float64:
+def get_minimum_temp(client_id: str, referencetime: str) -> np.float64:
     parameters: dict[str, str] = {
                 'sources': 'SN17850',
                 'elements': 'min(air_temperature P1Y)',
-                'referencetime': '2025-01-01/2025-12-31',
+                'referencetime': referencetime,
 }
     minimum_temp_data: list[dict[str, Any]] = request_data(ENDPOINT, parameters, client_id)
-    minimum_temp_df: pd.DataFrame = make_dataframe(minimum_temp_data, "PT18H")
+    minimum_temp_df: pd.DataFrame = make_dataframe(minimum_temp_data, 'PT18H')
     minimum_temp: np.float64 = minimum_temp_df['value'].values[0]
 
     return minimum_temp
 
 
-def summary_temp(mean: np.float64, median: float, minimum: np.float64, maximum: np.float64) -> None:
-    title: str = f"Summary of key values regarding temprature in 2025"
+def summary_temp(mean: np.float64, median: float, minimum: np.float64, maximum: np.float64, year: str) -> None:
+    title: str = f"Summary of key values regarding temprature in {year}"
     rows: list[tuple[str,str]] = [
         ("Mean air temprature:", f"{mean}°C"),
-        ("Median air temprature:", f"{median}°C"),
+        ("Median air temprature:", f"{median:.1f}°C"),
         ("Maximum air temprature:", f"{maximum}°C"),
         ("Mininmum air temprature:", f"{minimum}°C"),
     ]
@@ -151,6 +149,11 @@ def summary_temp(mean: np.float64, median: float, minimum: np.float64, maximum: 
     for label, value in rows:
         print(f"| {label:<{int(width/2)}}{value:>{int(width/2)}} |")
         print(border)
+    print()
+    if year == '1925':
+        print(f"Note that the max temprature and median is calculated from the mean temprature")
+    else:
+        print(f"Note that the median is calculated from the mean temprature")
     print()
 
 
@@ -176,6 +179,8 @@ def plot_precipitation_temp(precipitation: pd.DataFrame, temp: pd.DataFrame) -> 
 
 
 def main() -> None:
+    referencetime_2025: str = '2025-01-01/2025-12-31'
+    referencetime_1925: str = '1925-01-01/1925-12-31'
     parameters_temp_2025: dict[str, str] = {
     'sources': 'SN17850',
     'elements': 'mean(air_temperature P1D)',
@@ -185,7 +190,7 @@ def main() -> None:
     parameters_temp_1925: dict[str, str] = {
         'sources': 'SN17850',
         'elements': 'mean(air_temperature P1D)',
-        'referencetime': '1925-01-01/1925-12-31'
+        'referencetime': '1925-01-01/1925-12-31',
     }
     client_id: str = get_client_id()
     
@@ -193,11 +198,11 @@ def main() -> None:
     df_temp_2025: pd.DataFrame = make_dataframe(data_temp_2025, "PT6H")
     plot_temp(df_temp_2025)
 
-    mean_temp_2025_1PY: np.float64 = get_mean_temp(client_id)
+    mean_temp_2025_1PY: np.float64 = get_mean_temp(client_id, referencetime_2025)
     median_temp_2025: float = get_median_temp(df_temp_2025)
-    maximum_temp_2025: np.float64 = get_maximum_temp(client_id)
-    minimum_temp_2025: np.float64 = get_minimum_temp(client_id)
-    summary_temp(mean_temp_2025_1PY, median_temp_2025, minimum_temp_2025, maximum_temp_2025)
+    maximum_temp_2025: np.float64 = get_maximum_temp(client_id, referencetime_2025)
+    minimum_temp_2025: np.float64 = get_minimum_temp(client_id, referencetime_2025)
+    summary_temp(mean_temp_2025_1PY, median_temp_2025, minimum_temp_2025, maximum_temp_2025, "2025")
 
     parameters_precipitation: dict[str, str] = {
         'sources' : 'SN17850',
@@ -210,18 +215,20 @@ def main() -> None:
 
     
     data_temp_1925: list[dict[str, Any]] = request_data(ENDPOINT, parameters_temp_1925, client_id)
-    df_temp_1925: pd.DataFrame = make_dataframe(data_temp_1925, "PTH6")
+    df_temp_1925: pd.DataFrame = make_dataframe(data_temp_1925, "PT0H")
 
-    mean_temp_1925_1PY: np.float64 = get_mean_temp(client_id)
+    mean_temp_1925_1PY: np.float64 = get_mean_temp(client_id, referencetime_1925)
     median_temp_1925: float = get_median_temp(df_temp_1925)
-    maximum_temp_1925: float = get_maximum_temp(client_id)
-    minimum_temp_1925: float = get_minimum_temp(client_id)
+    maximum_temp_1925: float = df_temp_1925['value'].max()
+    minimum_temp_1925: float = get_minimum_temp(client_id, referencetime_1925)
+    
 
     summary_temp(
     mean_temp_1925_1PY,
     median_temp_1925,
     minimum_temp_1925,
-    maximum_temp_1925
+    maximum_temp_1925,
+    "1925"
     )
     plot_temp(df_temp_2025)
     compare_temps(df_temp_2025, df_temp_1925)
