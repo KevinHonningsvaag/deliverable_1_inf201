@@ -131,14 +131,18 @@ def plot_precipitation_temp(precipitation: pd.DataFrame, temp: pd.DataFrame) -> 
     temp_values: pd.Series = temp['value']
     
     fig, ax1 = plt.subplots()
-    ax1.bar(dates, precipitation_values)
+    ax1.bar(dates, precipitation_values, color="skyblue", zorder=1, label="Precipitation")
     ax1.set_ylabel("Precipitation mm")
     ax1.set_xlabel("Dates")
+    ax1.grid(zorder=0)
+    ax1.legend(loc='upper left')
 
     ax2 = ax1.twinx()
-    ax2.plot(dates, temp_values, color="red")
+    ax2.plot(dates, temp_values, color="pink", zorder=1, label="Temprature")
     ax2.set_ylabel("Degrees °C")
-    plt.grid()
+    ax2.grid(zorder=0)
+    ax2.legend(loc='upper right')
+    plt.title("Mean temperature and sum precipitation PTH6  01.01.2025 - 31.12.2025")
     plt.show()
 
 
