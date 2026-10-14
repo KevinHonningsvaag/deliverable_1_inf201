@@ -137,7 +137,7 @@ def summary_temp(mean: np.float64, median: float, minimum: np.float64, maximum: 
         ("Mean air temprature:", f"{mean}°C"),
         ("Median air temprature:", f"{median:.1f}°C"),
         ("Maximum air temprature:", f"{maximum}°C"),
-        ("Mininmum air temprature:", f"{minimum}°C"),
+        ("Minimum air temprature:", f"{minimum}°C"),
     ]
     width: int = len(title)
     border: str = f"+{'-' * (width + 2)}+"
@@ -230,7 +230,6 @@ def main() -> None:
     maximum_temp_1925,
     "1925"
     )
-    plot_temp(df_temp_2025)
     compare_temps(df_temp_2025, df_temp_1925)
     plt.show()
 
