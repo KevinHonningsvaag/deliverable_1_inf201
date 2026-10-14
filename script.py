@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 import requests
 import numpy as np
+import yaml
 
 
 ENDPOINT: str = 'https://frost.met.no/observations/v0.jsonld'
@@ -178,6 +179,85 @@ def plot_precipitation_temp(precipitation: pd.DataFrame, temp: pd.DataFrame) -> 
     plt.show()
 
 
+def count_heatwaves(df: pd.DataFrame) -> list[str]:
+    """Find periods of five or more consecutive days with max temperature >= 27°C."""
+
+    df = df.sort_values("referenceTime")
+
+    heatwaves = []
+    consecutive_days = 0
+    start_date = None
+    previous_date = None
+
+    for _, row in df.iterrows():
+        date = row["referenceTime"].date()
+        temperature = row["value"]
+        if temperature >= 27:
+            if consecutive_days == 0:
+                start_date = date
+                consecutive_days = 1
+            elif (date - previous_date).days == 1:
+                consecutive_days += 1
+            else:
+                consecutive_days = 1
+                start_date = date
+        else:
+            if consecutive_days >= 5:
+                heatwaves.append(f"{start_date} - {previous_date}")
+            consecutive_days = 0
+
+        previous_date = date
+    # Checks if the last days of the year form a heatwave
+    if consecutive_days >= 5:
+        heatwaves.append(f"{start_date} - {previous_date}")
+
+    return heatwaves
+
+
+def save_heatwaves(
+    heatwaves: list[str],
+    station_id: str,
+    station_name: str,
+    year: int
+) -> None:
+    """Save heatwave information to a YAML file."""
+
+    summary = {
+        "dates": heatwaves,
+        "station_id": station_id,
+        "station_name": station_name,
+        "year": year
+    }
+
+    with open("heatwave_summary.yml", "w", encoding="utf-8") as file:
+        yaml.safe_dump(
+            summary,
+            file,
+            allow_unicode=True,
+            sort_keys=False
+        )
+
+
+def analyze_heatwaves(
+    client_id: str,
+    station_id: str,
+    station_name: str,
+    year: int
+) -> int:
+    """Count heatwaves for a station and year, and save a YAML summary."""
+    parameters: dict[str, str] = {
+        "sources": station_id,
+        "elements": "max(air_temperature P1D)",
+        "referencetime": f"{year}-01-01/{year + 1}-01-01"
+    }
+    data = request_data(ENDPOINT, parameters, client_id)
+    # Check that PT18H matches the timeOffset returned by Frost
+    df = make_dataframe(data, "PT18H")
+    heatwaves = count_heatwaves(df)
+    save_heatwaves(heatwaves, station_id, station_name, year)
+    return len(heatwaves)
+
+
 def main() -> None:
     referencetime_2025: str = '2025-01-01/2025-12-31'
     referencetime_1925: str = '1925-01-01/1925-12-31'
@@ -217,11 +297,16 @@ def main() -> None:
     data_temp_1925: list[dict[str, Any]] = request_data(ENDPOINT, parameters_temp_1925, client_id)
     df_temp_1925: pd.DataFrame = make_dataframe(data_temp_1925, "PT0H")
 
-    mean_temp_1925_1PY: np.float64 = get_mean_temp(client_id, referencetime_1925)
+    mean_temp_1925_1PY: np.float64 = get_mean_temp(
+        client_id, 
+        referencetime_1925
+    )
     median_temp_1925: float = get_median_temp(df_temp_1925)
     maximum_temp_1925: float = df_temp_1925['value'].max()
-    minimum_temp_1925: float = get_minimum_temp(client_id, referencetime_1925)
-    
+    minimum_temp_1925: float = get_minimum_temp(
+        client_id, 
+        referencetime_1925
+    )
 
     summary_temp(
     mean_temp_1925_1PY,
@@ -230,8 +315,19 @@ def main() -> None:
     maximum_temp_1925,
     "1925"
     )
-    compare_temps(df_temp_2025, df_temp_1925)
+    compare_temps(
+        df_temp_2025,
+          df_temp_1925
+    )
     plt.show()
+    number_of_heatwaves = analyze_heatwaves(
+    client_id,
+    "SN17850",
+    "Ås",
+    2025
+    )   
+
+    print(f"Number of heatwaves: {number_of_heatwaves}")
 
 
 if __name__ == "__main__":
