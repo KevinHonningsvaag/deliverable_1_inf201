@@ -1,6 +1,7 @@
 
 # Standard library
 import json
+from statistics import median_grouped
 from typing import Any
 
 # Third party library
@@ -8,6 +9,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import requests
 import matplotlib.dates as mdates
+import numpy as np
 
 
 ENDPOINT: str = 'https://frost.met.no/observations/v0.jsonld'
@@ -21,6 +23,7 @@ def get_client_id() -> str:
 
 
 def request_data(endpoint: str, parameters: dict[str, str], client_id: str) -> list[dict[str, Any]]:
+    """Request data from the frost.met.no API. Returns a sentence on how it went"""
     r = requests.get(endpoint, parameters, auth=(client_id,''))
     json_data: dict[str, Any] = r.json()
     if r.status_code == 200:
@@ -74,14 +77,13 @@ def plot_temp(df: pd.DataFrame) -> None:
     plt.grid(True, zorder=1, color="black")
     plt.grid(True, which="minor", axis="y", zorder=0, color="gray")
     plt.minorticks_on()
-    plt.plot(dates, temperatures, color="black", zorder=1, label="2025")
+    plt.plot(dates, temperatures, color="black", zorder=1)
     plt.fill_between(dates, temperatures, 0, where=(temperatures >= 0).tolist(), interpolate=True, color="red", zorder=2)
     plt.fill_between(dates, temperatures, 0, where=(temperatures < 0).tolist(), interpolate=True, color="blue", zorder=2)
     plt.title("Mean temperature PT0H 01.01.2025 - 31.12.2025")
     plt.xlabel("Date")
     plt.ylabel("Degrees °C")
     plt.axhline(y=0, linestyle="--", color="black")
-    plt.legend()
 
 def compare_temps(df: pd.DataFrame, df_old: pd.DataFrame) -> None:
     """compare the temps from 1925 and 2025 in the same plot."""
@@ -107,8 +109,65 @@ def compare_temps(df: pd.DataFrame, df_old: pd.DataFrame) -> None:
     plt.axhline(y=0, linestyle="--", color="black")
     plt.legend()
 
-def temp_table(mean: float, median: float, min: float, max: float) -> None:
-    pass
+
+def get_mean_temp(client_id: str) ->  np.float64:
+    parameters: dict[str, str] = {
+        'sources': 'SN17850',
+        'elements': 'mean(air_temperature P1Y)',
+        'referencetime': '1925-01-01/1925-12-31',
+    }
+    mean_temp: list[dict[str, Any]] = request_data(ENDPOINT, parameters, client_id)
+    mean_temp_df: pd.DataFrame = make_dataframe_old(mean_temp)
+    mean_temp_value: np.float64 = mean_temp_df['value'].values[0]
+    print(mean_temp_df)
+    
+    return mean_temp_value
+
+
+def get_median_temp_1925(df_old: pd.DataFrame) -> float:
+    array = df_old['value'].values
+    median: float = median_grouped(array)
+
+    return median
+    
+
+
+def get_maximum_temp(df_old: pd.DataFrame) -> float:
+    """Find the highest daily mean temperature in 1925."""
+    maximum_temp: float = float(df_old["value"].max())
+
+    return maximum_temp
+
+
+
+def get_minimum_temp(df_old: pd.DataFrame) -> float:
+    """Find the lowest daily mean temperature in 1925."""
+    minimum_temp: float = float(df_old["value"].min())
+
+    return minimum_temp
+
+  
+
+
+def summary_temp_1925(mean: float, median: float, minimum: float, maximum: float) -> None:
+    title: str = f"Summary of key values regarding temprature in 1925"
+    rows: list[tuple[str,str]] = [
+        ("Mean air temprature:", f"{mean}°C"),
+        ("Median air temprature:", f"{median}°C"),
+        ("Maximum air temprature:", f"{maximum}°C"),
+        ("Mininmum air temprature:", f"{minimum}°C"),
+    ]
+    width:int = len(title)
+    border: str = f"+{'-' * (width + 2)}+"
+
+    print()
+    print(border)
+    print(f"| {title:<{width}} |")
+    print(border)
+    for label, value in rows:
+        print(f"| {label:<{int(width/2)}}{value:>{int(width/2)}} |")
+        print(border)
+    print()
 
 
 def main() -> None:
@@ -129,6 +188,18 @@ def main() -> None:
     old_data: list[dict[str, Any]] = request_old_data(ENDPOINT, old_parameters, client_id)
     df: pd.DataFrame = make_dataframe(data)
     df_old: pd.DataFrame = make_dataframe_old(old_data)
+
+    mean_temp_1925_1PY: np.float64 = get_mean_temp(client_id)
+    median_temp_1925: float = get_median_temp_1925(df_old)
+    maximum_temp_1925: float = get_maximum_temp(df_old)
+    minimum_temp_1925: float = get_minimum_temp(df_old)
+
+    summary_temp_1925(
+    mean_temp_1925_1PY,
+    median_temp_1925,
+    minimum_temp_1925,
+    maximum_temp_1925
+    )
     plot_temp(df)
     compare_temps(df, df_old)
     plt.show()
