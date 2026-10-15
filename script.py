@@ -16,14 +16,19 @@ ENDPOINT: str = 'https://frost.met.no/observations/v0.jsonld'
 
 
 def get_client_id() -> str:
+    """Gets the client ID from the frost_met_id.json file from the save_user_id.py script."""
     with open("frost_met_id.json", "r", encoding="utf-8") as file:
         credentials = json.load(file)
 
     return credentials[0]["user_id"]
 
 
-def request_data(endpoint: str, parameters: dict[str, str], client_id: str) -> list[dict[str, Any]]:
-    """Request data from the frost.met.no API. Returns a sentence on how it went"""
+def request_data(
+        endpoint: str, 
+        parameters: dict[str, str], 
+        client_id: str
+) -> list[dict[str, Any]]:
+    """Request data from the Frost API and print the request status."""
     r = requests.get(endpoint, parameters, auth=(client_id,''))
     json_data: dict[str, Any] = r.json()
     if r.status_code == 200:
@@ -39,7 +44,13 @@ def request_data(endpoint: str, parameters: dict[str, str], client_id: str) -> l
 
 
 def make_dataframe(data: list[dict[str, Any]], referenceTime: str) -> pd.DataFrame:
-    df: pd.DataFrame = pd.json_normalize(data, record_path=['observations'], meta=['sourceId', 'referenceTime'])
+    """Create a DataFrame from Frost data and filter by time offset."""
+    #   Frost uses nested JSON, so we need to use json_normalize to flatten the data into a dataframe.
+    df: pd.DataFrame = pd.json_normalize(
+        data, 
+        record_path=['observations'], 
+        meta=['sourceId', 'referenceTime']
+    )
     df: pd.DataFrame = df[df["timeOffset"] == referenceTime]
     df['referenceTime'] = pd.to_datetime(df['referenceTime'])
 
@@ -54,16 +65,35 @@ def plot_temp(df: pd.DataFrame) -> None:
     plt.grid(True, which="minor", axis="y", zorder=0, color="gray")
     plt.minorticks_on()
     plt.plot(dates, temperatures, color="black", zorder=1)
-    plt.fill_between(dates, temperatures, 0, where=(temperatures >= 0).tolist(), interpolate=True, color="red", zorder=2)
-    plt.fill_between(dates, temperatures, 0, where=(temperatures < 0).tolist(), interpolate=True, color="blue", zorder=2)
+    plt.fill_between(
+        dates, 
+        temperatures, 
+        0, 
+        where=(temperatures >= 0).tolist(), 
+        interpolate=True, 
+        color="red", 
+        zorder=2
+    )
+    plt.fill_between(
+        dates, 
+        temperatures, 
+        0, 
+        where=(temperatures < 0).tolist(), 
+        interpolate=True, 
+        color="blue", 
+        zorder=2
+    )
     plt.title("Mean temperature PT0H 01.01.2025 - 31.12.2025")
     plt.xlabel("Date")
     plt.ylabel("Degrees °C")
     plt.axhline(y=0, linestyle="--", color="black")
 
 def compare_temps(df: pd.DataFrame, df_old: pd.DataFrame) -> None:
-    """compare the temps from 1925 and 2025 in the same plot."""
-    #To have the old data plotted on the same graph, we need to change the year of the old data to 2025.
+    """
+    Plots the data from 1925 and 2025 in the same plot over the year,
+    so that we can visually compare the difference in temperatures.
+    """
+    # Change the year of the old data to 2025 for comparison purposes
     dates_old = df_old["referenceTime"].apply(
     lambda date: date.replace(year=2025)
     )
@@ -74,7 +104,7 @@ def compare_temps(df: pd.DataFrame, df_old: pd.DataFrame) -> None:
     plt.grid(True, zorder=0, color="black")
     plt.grid(True, which="minor", axis="y", zorder=0, color="black")
     plt.minorticks_on()
-    #Write the x-axis as months instead with the full date, and set the ticks to be at the start of each month.
+    # Display month names on the x-axis instead of full dates.
     plt.gca().xaxis.set_major_locator(mdates.MonthLocator())
     plt.gca().xaxis.set_major_formatter(mdates.DateFormatter('%b'))
     plt.plot(dates_old, temperatures_old, color="turquoise", label="1925", zorder = 3)
@@ -87,12 +117,14 @@ def compare_temps(df: pd.DataFrame, df_old: pd.DataFrame) -> None:
 
 
 def get_mean_temp(client_id: str, referencetime) ->  np.float64:
+    """Get the mean temperature for a given year."""
     parameters: dict[str, str] = {
         'sources': 'SN17850',
         'elements': 'mean(air_temperature P1Y)',
         'referencetime': referencetime,
     }
     mean_temp: list[dict[str, Any]] = request_data(ENDPOINT, parameters, client_id)
+    # Filters observations using the PT0H time offset.
     mean_temp_df: pd.DataFrame = make_dataframe(mean_temp, "PT0H")
     mean_temp_value: np.float64 = mean_temp_df['value'].values[0]
     
@@ -100,6 +132,7 @@ def get_mean_temp(client_id: str, referencetime) ->  np.float64:
 
 
 def get_median_temp(df: pd.DataFrame) -> float:
+    """Get the median temperature for a given year."""
     median: float = df['value'].median()
 
     return median
@@ -107,12 +140,14 @@ def get_median_temp(df: pd.DataFrame) -> float:
 
 
 def get_maximum_temp(client_id: str, referencetime:str) -> np.float64:
+    """Get the maximum temperature for a given year."""
     parameters: dict[str, str] = {
                 'sources': 'SN17850',
                 'elements': 'max(air_temperature P1Y)',
                 'referencetime': referencetime,
-}
+    }
     maximum_temp_data: list[dict[str, Any]] = request_data(ENDPOINT, parameters, client_id)
+    # Filters observations using the PT18H time offset..
     maximum_temp_df: pd.DataFrame = make_dataframe(maximum_temp_data, 'PT18H')
     maximum_temp: np.float64 = maximum_temp_df['value'].values[0]
 
@@ -120,19 +155,28 @@ def get_maximum_temp(client_id: str, referencetime:str) -> np.float64:
 
 
 def get_minimum_temp(client_id: str, referencetime: str) -> np.float64:
+    """Get the minimum temperature for a given year."""
     parameters: dict[str, str] = {
                 'sources': 'SN17850',
                 'elements': 'min(air_temperature P1Y)',
                 'referencetime': referencetime,
-}
+    }
     minimum_temp_data: list[dict[str, Any]] = request_data(ENDPOINT, parameters, client_id)
+    # Filters observations using the PT18H time offset..
     minimum_temp_df: pd.DataFrame = make_dataframe(minimum_temp_data, 'PT18H')
     minimum_temp: np.float64 = minimum_temp_df['value'].values[0]
 
     return minimum_temp
 
 
-def summary_temp(mean: np.float64, median: float, minimum: np.float64, maximum: np.float64, year: str) -> None:
+def summary_temp(
+        mean: np.float64, 
+        median: float, 
+        minimum: np.float64, 
+        maximum: np.float64, 
+        year: str
+) -> None:
+    """Print a summary of key values regarding temperature for a given year."""
     title: str = f"Summary of key values regarding temprature in {year}"
     rows: list[tuple[str,str]] = [
         ("Mean air temprature:", f"{mean}°C"),
@@ -159,6 +203,7 @@ def summary_temp(mean: np.float64, median: float, minimum: np.float64, maximum: 
 
 
 def plot_precipitation_temp(precipitation: pd.DataFrame, temp: pd.DataFrame) -> None:
+    """Plot the precipitation and temperature for 2025."""
     dates: pd.Series = precipitation['referenceTime']
     precipitation_values: pd.Series = precipitation['value']
     temp_values: pd.Series = temp['value']
@@ -180,7 +225,15 @@ def plot_precipitation_temp(precipitation: pd.DataFrame, temp: pd.DataFrame) -> 
 
 
 def count_heatwaves(df: pd.DataFrame) -> list[str]:
-    """Find periods of five or more consecutive days with max temperature >= 27°C."""
+    """
+   Find heatwaves using daily maximum temperatures.
+
+    A heatwave is five or more consecutive days with
+    maximum temperatures of at least 27°C.
+
+    Return a list containing the start and end dates
+    of each heatwave.
+    """
 
     df = df.sort_values("referenceTime")
 
@@ -229,6 +282,7 @@ def save_heatwaves(
         "year": year
     }
 
+    # Create a new file or overwrite the existing YAML file.
     with open("heatwave_summary.yml", "w", encoding="utf-8") as file:
         yaml.safe_dump(
             summary,
@@ -261,12 +315,12 @@ def analyze_heatwaves(
 def main() -> None:
     referencetime_2025: str = '2025-01-01/2025-12-31'
     referencetime_1925: str = '1925-01-01/1925-12-31'
+
     parameters_temp_2025: dict[str, str] = {
     'sources': 'SN17850',
     'elements': 'mean(air_temperature P1D)',
     'referencetime': '2025-01-01/2025-12-31',
-    
-}
+    }
     parameters_temp_1925: dict[str, str] = {
         'sources': 'SN17850',
         'elements': 'mean(air_temperature P1D)',
@@ -282,19 +336,29 @@ def main() -> None:
     median_temp_2025: float = get_median_temp(df_temp_2025)
     maximum_temp_2025: np.float64 = get_maximum_temp(client_id, referencetime_2025)
     minimum_temp_2025: np.float64 = get_minimum_temp(client_id, referencetime_2025)
-    summary_temp(mean_temp_2025_1PY, median_temp_2025, minimum_temp_2025, maximum_temp_2025, "2025")
+    summary_temp(
+        mean_temp_2025_1PY, 
+        median_temp_2025, 
+        minimum_temp_2025, 
+        maximum_temp_2025, 
+        "2025"
+    )
 
     parameters_precipitation: dict[str, str] = {
         'sources' : 'SN17850',
         'elements' : 'sum(precipitation_amount P1D)',
         'referencetime': '2025-01-01/2025-12-31',
     }
-    data_precipitation: list[dict[str, Any]] = request_data(ENDPOINT, parameters_precipitation, client_id)
+    data_precipitation: list[dict[str, Any]] = request_data(ENDPOINT,parameters_precipitation, client_id)
     df_precipitation: pd.DataFrame = make_dataframe(data_precipitation, "PT6H")
     plot_precipitation_temp(df_precipitation, df_temp_2025)
 
     
-    data_temp_1925: list[dict[str, Any]] = request_data(ENDPOINT, parameters_temp_1925, client_id)
+    data_temp_1925: list[dict[str, Any]] = request_data(
+        ENDPOINT,
+        parameters_temp_1925,
+        client_id
+        )
     df_temp_1925: pd.DataFrame = make_dataframe(data_temp_1925, "PT0H")
 
     mean_temp_1925_1PY: np.float64 = get_mean_temp(
@@ -303,10 +367,7 @@ def main() -> None:
     )
     median_temp_1925: float = get_median_temp(df_temp_1925)
     maximum_temp_1925: float = df_temp_1925['value'].max()
-    minimum_temp_1925: float = get_minimum_temp(
-        client_id, 
-        referencetime_1925
-    )
+    minimum_temp_1925: float = get_minimum_temp(client_id, referencetime_1925)
 
     summary_temp(
     mean_temp_1925_1PY,
@@ -315,10 +376,7 @@ def main() -> None:
     maximum_temp_1925,
     "1925"
     )
-    compare_temps(
-        df_temp_2025,
-          df_temp_1925
-    )
+    compare_temps(df_temp_2025, df_temp_1925)  
     plt.show()
     number_of_heatwaves = analyze_heatwaves(
     client_id,
@@ -328,7 +386,6 @@ def main() -> None:
     )   
 
     print(f"Number of heatwaves: {number_of_heatwaves}")
-
 
 if __name__ == "__main__":
     try:
