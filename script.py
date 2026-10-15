@@ -1,6 +1,5 @@
 
 # Standard library
-from cProfile import label
 import json
 from typing import Any
 
@@ -410,7 +409,7 @@ def main() -> None:
 
     print(f"Number of heatwaves: {number_of_heatwaves}")
 
-    df_moving_avrage = get_moving_avrage(df_temp_2025)
+    df_moving_avrage: pd.DataFrame = get_moving_avrage(df_temp_2025)
     plot_moving_avrage(df_moving_avrage, df_temp_2025)
     
 
