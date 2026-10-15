@@ -312,6 +312,28 @@ def analyze_heatwaves(
     return len(heatwaves)
 
 
+def get_moving_avrage(df_temp: pd.DataFrame) -> pd.DataFrame:
+    """Assign the same mean to each consecutive group of seven daily readings."""
+    df: pd.DataFrame = df_temp.sort_values('referenceTime').copy()
+    weeks: np.ndarray = np.arange(len(df)) // 7
+    df["moving_avrage"] = df.groupby(weeks)["value"].transform("mean")
+
+    return df
+
+
+def plot_moving_avrage(moving_avrage: pd.DataFrame, mean_temp: pd.DataFrame) -> None:
+    plt.figure("Moving 7-day and 1PD mean temprature 2025")
+    plt.plot(moving_avrage['referenceTime'], moving_avrage['moving_avrage'], color="Green", zorder=1, label="1PW")
+    plt.scatter(mean_temp['referenceTime'], mean_temp['value'], s=2, color="Black", zorder=1, label="1PD")
+    plt.xlabel("Date")
+    plt.ylabel("Degrees °C")
+    plt.axhline(y=0, linestyle="--", color="black", zorder=0)
+    plt.grid(zorder=0)
+    plt.title("Moving 7-day and 1PD mean temprature 2025")
+    plt.legend()
+    plt.show()
+
+
 def main() -> None:
     referencetime_2025: str = '2025-01-01/2025-12-31'
     referencetime_1925: str = '1925-01-01/1925-12-31'
@@ -386,6 +408,10 @@ def main() -> None:
     )   
 
     print(f"Number of heatwaves: {number_of_heatwaves}")
+
+    df_moving_avrage: pd.DataFrame = get_moving_avrage(df_temp_2025)
+    plot_moving_avrage(df_moving_avrage, df_temp_2025)
+    
 
 if __name__ == "__main__":
     try:
