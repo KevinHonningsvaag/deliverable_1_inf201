@@ -390,7 +390,7 @@ def main() -> None:
     )
     median_temp_1925: float = get_median_temp(df_temp_1925)
     maximum_temp_1925: float = df_temp_1925['value'].max()
-    minimum_temp_1925: float = get_minimum_temp(client_id, referencetime_1925)
+    minimum_temp_1925: np.float64 = get_minimum_temp(client_id, referencetime_1925)
     summary_temp(
     mean_temp_1925_1py,
     median_temp_1925,
